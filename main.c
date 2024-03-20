@@ -1,4 +1,4 @@
-#include "poem.c"
+#include "poem_collector.c"
 
 int main() {
     run("poem.txt");

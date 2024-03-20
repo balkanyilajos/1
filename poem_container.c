@@ -18,14 +18,15 @@ int createFile(const char* filename) {
     return 0;
 }
 
-int safeToFile(const char* filename, const char* text, const char* separator) {
-    if(!strlen(text)) { return 0; }
+int safeToFile(const char* filename, const Poem* poem, const char* separator) {
+    if(!strlen(poem->content) || !strlen(poem->title)) { return 0; }
     if(!isFileExists(filename)) {
         if(createFile(filename)) { return -1; }
     }
 
     FILE* fp = fopen(filename, "a");
-    fprintf(fp, "%s", text);
+    fprintf(fp, "%s\n", poem->title);
+    fprintf(fp, "%s", poem->content);
     fprintf(fp, "%s", separator);
 
     fclose(fp);

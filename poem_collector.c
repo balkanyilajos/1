@@ -1,4 +1,4 @@
-#include "poem.h"
+#include "poem_collector.h"
 
 static const char* MENU_TEXT =  "--------------------------\n"
                                 "| [1] Add a new poem     |\n"
@@ -18,11 +18,11 @@ void run(const char* filename) {
     while(running) {
         printf("%s", MENU_TEXT);
 
-        char* poem;
+        Poem* poem;
         int inputValue = readNumberFromConsole();
         switch(inputValue) {
             case 1:
-                printf("I am waiting for your poem (to stop it, press @ or EOF): \n");
+                printf("I am waiting for your poem (to stop it, press @ or EOF):\n");
                 poem = readPoemFromConsole();
                 if(poem == NULL) MemoryAllocationException();
                 if(safeToFile(filename, poem, separatorWithNewLines)) {free(poem); IOException(); }
@@ -54,49 +54,74 @@ Poem* readPoemFromConsole() {
     Poem* poem = (Poem*)malloc(sizeof(Poem));
     if(poem == NULL) return NULL;
 
-    int bufferSize = 128;
-    poem->title = (char*)malloc(bufferSize * sizeof(char));
-    poem->content = (char*)malloc(bufferSize * sizeof(char));
-    if(poem->content == NULL || poem->title == NULL) return NULL;
+    int titleBufferSize = 32;
+    int contentBufferSize = 128;
 
-    printf("title: ");
-    scanf("%s", &poem->title);
+    poem->title = (char*)malloc(titleBufferSize * sizeof(char));
+    if(poem->title == NULL) { free(poem); return NULL; }
 
-    int index = 0;
-    bool isLineBreak = true;
-    char c = getchar();
-    c = getchar();
-    while(c != EOF && c != '@') {
-        if(isLineBreak && c == '\n') { 
-            c = getchar();
-            continue;
-        }
-        else { 
-            isLineBreak = false; 
-        }
+    poem->content = (char*)malloc(contentBufferSize * sizeof(char));
+    if(poem->content == NULL) { free(poem->title); free(poem); return NULL; }
 
-        if(index >= bufferSize) {
-            bufferSize *= 2;
-            poem = (char*)realloc(poem, bufferSize * sizeof(char));
-            if(poem == NULL) { free(poem); return NULL; }
+    printf("title - ");
+    //fgets(poem->title, bufferSize * sizeof(char), stdin);
+
+    int i = 0;
+    for(char c = getchar(); c != EOF && c != '\n'; i += 1, c = getchar()) {
+        if(i >= titleBufferSize-2) {
+            titleBufferSize *= 2;
+            poem->title = (char*)realloc(poem->title, titleBufferSize * sizeof(char));
+            if(poem->title == NULL) { free(poem->title); return NULL; }
         }
-        poem[index++] = c;
-        c = getchar();
+        poem->title[i] = c;
     }
-
-    poem[index--] = '\0';
-    while(poem[index] == '\n') {
-        poem[index--] = '\0';
+    poem->title[i] = '\0';
+    
+    printf("content:\n");
+    i = 0;
+    for(char c = getchar(); c != EOF && c != '@'; i += 1, c = getchar()) {
+        if(i >= contentBufferSize-2) {
+            contentBufferSize *= 2;
+            poem->content = (char*)realloc(poem->content, contentBufferSize * sizeof(char));
+            if(poem->content == NULL) { free(poem->content); return NULL; }
+        }
+        poem->content[i] = c;
     }
+    poem->content[i] = '\0';
+
+    trim(poem->title);
+    trim(poem->content);
 
     return poem;
 }
 
 int readNumberFromConsole() {
-    int number;
-    scanf("%d", &number);
+    char line[16];
+    fgets(line, sizeof(line), stdin);
 
-    return number;
+    return atoi(line);
+}
+
+void trim(char* str) {
+    int start = 0;
+    while (isspace(str[start])) {
+        start += 1;
+    }
+
+    if (str[start] == '\0') {
+        str[0] = '\0';
+        return;
+    }
+
+    int end = strlen(str)-1;
+    while (isspace(str[end])) {
+        end -= 1;
+    }
+    str[end + 1] = '\0';
+
+    if (start > 0) {
+        memmove(str, str + start, end - start + 2);
+    }
 }
 
 void MemoryAllocationException() {
