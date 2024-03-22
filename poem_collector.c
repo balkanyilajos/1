@@ -19,31 +19,72 @@ void run(const char* filename) {
         printf("%s", MENU_TEXT);
 
         Poem* poem;
+        int id;
         int inputValue = readNumberFromConsole();
         switch(inputValue) {
             case 1:
                 printf("I am waiting for your poem (to stop it, press @ or EOF):\n");
                 poem = readPoemFromConsole();
                 if(poem == NULL) MemoryAllocationException();
-                if(safeToFile(filename, poem, separatorWithNewLines)) {free(poem); IOException(); }
-                free(poem);
+                if(safeToFile(filename, poem, separatorWithNewLines)) {freePoem(poem); IOException(); }
+                freePoem(poem);
             break;
             case 2:
                 printf("Enter the id of the selected poem: ");
-                int id = readNumberFromConsole();
-                char* poem = readFromFile(filename, id, separator);
+                id = readNumberFromConsole();
+                poem = readFromFile(filename, id, separator);
                 if (poem == NULL) IOException();
-                
-                printf("%s", poem);
-                free(poem);
+                if (strlen(poem->title) == 0) {
+                    printf("The ID doesn't exists!\n");
+                }
+                else {
+                    printPoem(poem);
+                }
+
+                freePoem(poem);
             break;
             case 3:
+                id = 1;
+                poem = readFromFile(filename, id, separator);
+                if(poem == NULL) IOException();
+
+                printf("titles:\n");
+                while(strlen(poem->title) != 0) {
+                    printf("%d: %s\n", id, poem->title);
+                    freePoem(poem);
+
+                    id += 1;
+                    poem = readFromFile(filename, id, separator);
+                    if(poem == NULL) IOException();
+                }
+                freePoem(poem);
             break;
             case 4:
+                printf("Enter the id of the selected poem: ");
+                id = readNumberFromConsole();
+                freePoem(deleteFromFile(filename, id, separator));
             break;
             case 5:
-            default:
+                printf("Enter the id of the selected poem: ");
+                id = readNumberFromConsole();
+                poem = deleteFromFile(filename, id, separator);
+                if (strlen(poem->title) == 0) {
+                    printf("The ID doesn't exists!\n");
+                }
+                else {
+                    printPoem(poem);
+
+                    printf("Write here your new Poem: ");
+                    poem = readPoemFromConsole();
+                    if(poem == NULL) MemoryAllocationException();
+                    if(safeToFile(filename, poem, separatorWithNewLines)) {freePoem(poem); IOException(); }
+                }
+                
+                freePoem(poem);
+            break;
+            case 6:
                 running = false;
+            break;
         }
         
         printf("\n");
@@ -54,45 +95,38 @@ Poem* readPoemFromConsole() {
     Poem* poem = (Poem*)malloc(sizeof(Poem));
     if(poem == NULL) return NULL;
 
-    int titleBufferSize = 32;
-    int contentBufferSize = 128;
-
-    poem->title = (char*)malloc(titleBufferSize * sizeof(char));
-    if(poem->title == NULL) { free(poem); return NULL; }
-
-    poem->content = (char*)malloc(contentBufferSize * sizeof(char));
-    if(poem->content == NULL) { free(poem->title); free(poem); return NULL; }
-
     printf("title - ");
-    //fgets(poem->title, bufferSize * sizeof(char), stdin);
-
-    int i = 0;
-    for(char c = getchar(); c != EOF && c != '\n'; i += 1, c = getchar()) {
-        if(i >= titleBufferSize-2) {
-            titleBufferSize *= 2;
-            poem->title = (char*)realloc(poem->title, titleBufferSize * sizeof(char));
-            if(poem->title == NULL) { free(poem->title); return NULL; }
-        }
-        poem->title[i] = c;
-    }
-    poem->title[i] = '\0';
+    poem->title = readStringFromConsole('\n');
+    if(poem->title == NULL) { freePoem(poem); return NULL; }
     
     printf("content:\n");
-    i = 0;
-    for(char c = getchar(); c != EOF && c != '@'; i += 1, c = getchar()) {
-        if(i >= contentBufferSize-2) {
-            contentBufferSize *= 2;
-            poem->content = (char*)realloc(poem->content, contentBufferSize * sizeof(char));
-            if(poem->content == NULL) { free(poem->content); return NULL; }
-        }
-        poem->content[i] = c;
-    }
-    poem->content[i] = '\0';
+    poem->content = readStringFromConsole('@');
+    if(poem->content == NULL) { freePoem(poem); return NULL; }
 
     trim(poem->title);
     trim(poem->content);
 
     return poem;
+}
+
+char* readStringFromConsole(char end) {
+    int buffer = 2;
+
+    char* storage = (char*)malloc(buffer * sizeof(char));
+    if(storage == NULL) { return NULL; }
+
+    int i = 0;
+    for(char c = getchar(); c != EOF && c != end; i += 1, c = getchar()) {
+        if(i >= buffer-2) {
+            buffer *= 2;
+            storage = (char*)realloc(storage, buffer * sizeof(char));
+            if(storage == NULL) { free(storage); return NULL; }
+        }
+        storage[i] = c;
+    }
+    storage[i] = '\0';
+
+    return storage;
 }
 
 int readNumberFromConsole() {
@@ -123,6 +157,8 @@ void trim(char* str) {
         memmove(str, str + start, end - start + 2);
     }
 }
+
+// error functions
 
 void MemoryAllocationException() {
     printf("Memory allocation error!");

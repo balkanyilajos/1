@@ -12,6 +12,7 @@
 void run(const char* filename);
 Poem* readPoemFromConsole(void);
 int readNumberFromConsole(void);
+char* readStringFromConsole(char end);
 void trim(char* str);
 
 void MemoryAllocationException(void);
