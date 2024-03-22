@@ -3,3 +3,6 @@ bin/
 
 # ignore vscode files
 .vscode/
+
+# ignore object files
+.o
